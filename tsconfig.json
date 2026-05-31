@@ -9,5 +9,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "exclude": ["prisma/migrations", "node_modules"]
+  "include": ["src/**/*", "prisma.config.ts"],
+  "exclude": ["prisma/migrations", "node_modules", "dist"]
 }
