@@ -1,9 +1,5 @@
-import prisma from "../prisma";
 import { Request, Response, NextFunction } from "express";
-import {
-  atualizarTarefaSchema,
-  criarTarefaSchema,
-} from "../schemas/tarefaSchema";
+import prisma from "../prisma";
 
 export async function listarTarefas(
   req: Request,
@@ -11,8 +7,12 @@ export async function listarTarefas(
   next: NextFunction,
 ) {
   try {
-    const tarefa = await prisma.tarefa.findMany();
-    res.json(tarefa);
+    const usuarioId = (req as any).usuario.id;
+
+    const tarefas = await prisma.tarefa.findMany({
+      where: { usuarioId },
+    });
+    res.json(tarefas);
   } catch (error) {
     next(error);
   }
@@ -24,10 +24,12 @@ export async function listarTarefa(
   next: NextFunction,
 ) {
   try {
-    const id: number = Number(req.params.id);
+    const id = Number(req.params.id);
+    const usuarioId = (req as any).usuario.id;
+
     const tarefa = await prisma.tarefa.findUnique({ where: { id } });
 
-    if (!tarefa) {
+    if (!tarefa || tarefa.usuarioId !== usuarioId) {
       return res.status(404).json({ erro: "Task not found!" });
     }
 
@@ -43,20 +45,15 @@ export async function criarTarefa(
   next: NextFunction,
 ) {
   try {
-    const result = criarTarefaSchema.safeParse(req.body);
-
-    if (!result.success) {
-      return res.status(400).json({ erro: result.error.flatten().fieldErrors });
-    }
-
-    const { titulo } = result.data;
+    const usuarioId = (req as any).usuario.id;
+    const { titulo } = req.body;
 
     if (!titulo) {
       return res.status(400).json({ erro: "Not enough data to create task!" });
     }
 
     const newTask = await prisma.tarefa.create({
-      data: { titulo },
+      data: { titulo, usuarioId },
     });
 
     res.status(201).json(newTask);
@@ -71,14 +68,15 @@ export async function editarTarefa(
   next: NextFunction,
 ) {
   try {
-    const id: number = Number(req.params.id);
-    const result = atualizarTarefaSchema.safeParse(req.body);
+    const id = Number(req.params.id);
+    const usuarioId = (req as any).usuario.id;
+    const { titulo, feito } = req.body;
 
-    if (!result.success) {
-      return res.status(400).json({ erro: result.error.flatten().fieldErrors });
+    const tarefa = await prisma.tarefa.findUnique({ where: { id } });
+
+    if (!tarefa || tarefa.usuarioId !== usuarioId) {
+      return res.status(404).json({ erro: "Task not found!" });
     }
-
-    const { titulo, feito } = result.data;
 
     const task = await prisma.tarefa.update({
       where: { id },
@@ -97,11 +95,18 @@ export async function deletarTarefa(
   next: NextFunction,
 ) {
   try {
-    const id: number = Number(req.params.id);
+    const id = Number(req.params.id);
+    const usuarioId = (req as any).usuario.id;
+
+    const tarefa = await prisma.tarefa.findUnique({ where: { id } });
+
+    if (!tarefa || tarefa.usuarioId !== usuarioId) {
+      return res.status(404).json({ erro: "Task not found!" });
+    }
 
     await prisma.tarefa.delete({ where: { id } });
 
-    return res.json({ message: "User deleted sucessfully!" });
+    return res.json({ message: "Task deleted successfully!" });
   } catch (error) {
     next(error);
   }

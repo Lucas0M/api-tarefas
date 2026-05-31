@@ -10,8 +10,8 @@ import {
 
 const router = Router();
 
-router.get("/", listarTarefas);
-router.get("/:id", listarTarefa);
+router.get("/", auth, listarTarefas);
+router.get("/:id", auth, listarTarefa);
 router.post("/", auth, criarTarefa);
 router.put("/:id", auth, editarTarefa);
 router.delete("/:id", auth, deletarTarefa);
